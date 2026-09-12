@@ -1,0 +1,35 @@
+<!DOCTYPE html><html><head><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>GoMerry - LIVE PayPal</title>
+<style>body{font-family:Arial;padding:15px;max-width:400px;margin:auto;background:#f5f5f5}.card{border:1px solid #ddd;padding:20px;border-radius:15px;background:#fff;margin:10px 0}input{width:100%;padding:12px;margin:8px 0;border-radius:8px;border:1px solid #ccc;box-sizing:border-box}button{width:100%;padding:14px;border-radius:8px;border:0;font-weight:bold}</style>
+</head><body>
+<h2>🎉 GoMerry Circle - LIVE</h2>
+<p style="color:green">✅ REAL PayPal Payments - Money goes to victorkiragu06@gmail.com</p>
+<div class=card>
+<input id=name placeholder="Full Name">
+<input id=phone placeholder="Phone / M-Pesa">
+<input id=age type=number placeholder="Age 18-100">
+<button onclick="join('mpesa')" style="background:#000;color:#fff;margin-top:10px">Join Circle - KES 30 (M-Pesa)</button>
+<div style="text-align:center;margin:15px 0;font-weight:bold">OR PAY WITH PAYPAL</div>
+<div id="paypal-button-container"></div>
+<p id=status style="color:green;font-weight:bold"></p>
+</div>
+<script src="https://www.paypal.com/sdk/js?client-id=BAAKnJCVrPoYLyEIbjyPO386i1lwPehh1cOxlVOjMIAJhq6hqibOOSMEKaCvvNgxftzoJ9TyZSEIrFTD9g&currency=USD"></script>
+<script>
+function join(method){
+ const n=document.getElementById('name').value;
+ const p=document.getElementById('phone').value;
+ const a=document.getElementById('age').value;
+ if(!n||!p||!a){alert('Fill Name Phone Age');return;}
+ fetch('/api/join',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:n,phone:p,age:parseInt(a),pay_method:method})})
+.then(r=>r.json()).then(j=>{document.getElementById('status').innerHTML='✅ Joined Group #'+j.group_number+' ('+j.members_in_group+'/10)';});
+}
+paypal.Buttons({
+ style:{layout:'vertical',color:'gold',shape:'rect',label:'pay'},
+ createOrder:(d,act)=>{
+  const age=document.getElementById('age').value||35;
+  let usd="3"; if(age>=41&&age<=50) usd="5"; if(age>50) usd="10";
+  return act.order.create({purchase_units:[{amount:{value:usd},description:"GoMerry Circle KES 30"}]});
+ },
+ onApprove:(d,act)=>{return act.order.capture().then(det=>{alert('✅ REAL Payment Paid $'+det.purchase_units[0].amount.value+' by '+det.payer.name.given_name);join('paypal');});}
+}).render('#paypal-button-container');
+</script></body></html>

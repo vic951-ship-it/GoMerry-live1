@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<head><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ADMIN</title>
+<style>body{font-family:monospace;padding:10px} .card{border:2px solid #000;padding:10px;margin:10px 0;border-radius:10px}</style>
+</head>
+<body>
+<h2>ADMIN DB - Victor should appear below</h2>
+<div id="out">Loading...</div>
+<script>
+fetch('/api/admin_data?key=merry2025').then(r=>r.json()).then(j=>{
+ let h='<h3>Users: '+j.users.length+'</h3>';
+ j.users.forEach(u=>{
+  h+='<div class=card>ID:'+u.id+'<br>Name:'+u.name+'<br>Phone:'+u.phone+'<br>Range:'+u.range_min+'-'+u.range_max+'<br>Amt:'+u.amount+'<br>Life:'+u.lifetime_amount+' Paid:'+u.lifetime_paid+'</div>';
+ });
+ h+='<h3>Groups: '+j.groups.length+'</h3>';
+ j.groups.forEach(g=>{
+  h+='<div class=card>Group #'+g.group.group_number+' '+g.group.range_min+'-'+g.group.range_max+' '+g.group.status+'<br>Total KES '+g.group.total_amount+' Members '+g.members.length+'/10<br>';
+  if(g.group.beneficiary_id){h+='WINNER ID:'+g.group.beneficiary_id+'<br>';}
+  g.members.forEach(m=>{h+='- '+m.name+' '+m.phone+' KES '+m.amount+'<br>';});
+  h+='</div>';
+ });
+ document.getElementById('out').innerHTML=h;
+}).catch(e=>{document.getElementById('out').innerHTML='Error '+e;});
+</script>
+</body>
+</html>

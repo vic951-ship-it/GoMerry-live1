@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>GoMerry</title>
+<style>
+body{font-family:sans-serif;padding:12px;max-width:420px;margin:auto;background:#f5f5f5}
+.card{background:#fff;padding:14px;border-radius:14px;border:2px solid #000;margin:8px 0}
+input,button{width:100%;padding:12px;margin:6px 0;border:2px solid #000;border-radius:10px;box-sizing:border-box}
+button{background:#000;color:#fff;font-weight:bold}
+.range{padding:11px;margin:6px 0;border:2px solid #000;border-radius:10px;text-align:center;background:#fff;font-weight:bold}
+.range.selected{background:#000;color:#fff}
+#step2,#step3{display:none}
+</style>
+</head>
+<body>
+<h2 style="text-align:center">GoMerry Join</h2>
+<div class="card" id="step1">
+<input id="fullname" placeholder="Full Name">
+<input id="phone" placeholder="0718...">
+<button onclick="goStep2()">Continue</button>
+</div>
+<div class="card" id="step2" style="display:none">
+<h3>Select Range</h3>
+<div id="list"></div>
+<button onclick="showNext()" style="background:#fff;color:#000">Generate More</button>
+<div id="amountBox" style="display:none;margin-top:10px">
+<h4 id="rangeLabel"></h4>
+<input type="number" id="amount">
+<div id="statusBox" style="padding:8px;background:#eef;border-radius:8px;margin:6px 0;font-size:14px"></div>
+<button onclick="joinGroup()">Pay & Join</button>
+</div>
+</div>
+<div class="card" id="step3" style="display:none">
+<h3 id="thanks"></h3>
+<p id="info"></p>
+<div id="lifetimeBox"></div>
+</div>
+<script>
+let from=10,to=20,sFrom=0,sTo=0;
+function showNext(){
+ let d=document.createElement('div');d.className='range';d.innerText=from+' - '+to;
+ d.onclick=async function(){
+  document.querySelectorAll('.range').forEach(e=>e.classList.remove('selected'));
+  this.classList.add('selected');
+  let t=this.innerText.split(' - ');sFrom=parseInt(t[0]);sTo=parseInt(t[1]);
+  document.getElementById('amountBox').style.display='block';
+  document.getElementById('rangeLabel').innerText='Amount '+sFrom+' - '+sTo;
+  document.getElementById('amount').value=sFrom;
+  let r=await fetch('/api/group_status/'+sFrom+'/'+sTo);let j=await r.json();
+  document.getElementById('statusBox').innerHTML='Group #'+(j.group_number||1)+' : '+j.count+'/10<br>Total: KES '+j.total+(j.beneficiary?' <br>Winner: '+j.beneficiary:'');
+ };
+ document.getElementById('list').appendChild(d);from=to;to+=10;
+}
+showNext();showNext();showNext();
+function goStep2(){
+ if(!fullname.value.trim()||!phone.value.trim()){alert('Fill');return;}
+ step1.style.display='none';step2.style.display='block';
+}
+async function joinGroup(){
+ let amt=parseInt(amount.value);
+ if(amt<sFrom||amt>sTo){alert('Must be inside');return;}
+ let res=await fetch('/api/join',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:fullname.value,phone:phone.value,range_min:sFrom,range_max:sTo,amount:amt})});
+ let data=await res.json();if(data.error){alert(data.error);return;}
+ step2.style.display='none';step3.style.display='block';
+ thanks.innerText='Thanks '+fullname.value+' Group #'+data.group_number;
+ info.innerHTML='Range: '+data.range+'<br>Members: '+data.count+'/10<br>Total: KES '+data.total+(data.beneficiary?'<br>Winner: '+data.beneficiary.name:'<br>Waiting '+(10-data.count)+' more');
+ let life=sTo*10;
+ lifetimeBox.innerHTML='<div style="border:2px dashed #000;padding:10px;border-radius:10px"><b>ONCE LIFETIME</b><br>KES '+life+'<br><button onclick="payLife()">Pay KES '+life+'</button></div>';
+}
+async function payLife(){
+ await fetch('/api/pay_lifetime',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({phone:phone.value})});
+ alert('Lifetime paid');lifetimeBox.innerHTML='Paid - Once';
+}
+</script>
+</body>
+</html>
