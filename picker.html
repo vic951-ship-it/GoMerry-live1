@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>GoMerry 2.0 LIVE</title>
+<script src="https://www.paypal.com/sdk/js?client-id=BAAKnJCVrPoYLyEIbjyPO386i1lwPehh1cOxlVOjMIAJhq6hqibOOSMEKaCvvNgxftzoJ9TyZSEIrFTD9g&currency=USD"></script>
+<style>
+*{box-sizing:border-box;font-family:Arial}body{background:#f5f7ff;margin:0;padding:15px}
+.card{background:white;border-radius:16px;padding:20px;max-width:460px;margin:15px auto;box-shadow:0 10px 30px rgba(0,0,0,0.15)}
+.btn{width:100%;padding:14px;background:#0070ba;color:white;border:none;border-radius:10px;font-weight:bold;margin:8px 0;cursor:pointer;font-size:16px}
+.btn2{background:#667eea}.inp{width:100%;padding:12px;border:1px solid #ddd;border-radius:8px;margin:6px 0}
+.rangeBtn{padding:10px 14px;margin:5px;border:2px solid #667eea;border-radius:20px;background:white;cursor:pointer}
+.rangeBtn.active{background:#667eea;color:white}
+.member{background:#f0f4ff;padding:8px;border-radius:8px;margin:4px 0;font-size:13px}
+.hidden{display:none}
+</style></head><body>
+<div class="card" id="step1">
+<h2>GoMerry - Pay $1 to Register</h2>
+<p>Pay $1 real via PayPal to unlock merry-go-round</p>
+<input class="inp" id="rName" placeholder="Your Name">
+<input class="inp" id="rPhone" placeholder="Phone/Email">
+<div id="paypal-button"></div>
+<p id="s1msg" style="color:green;font-weight:bold"></p>
+</div>
+
+<div class="card hidden" id="step2">
+<h2>Step 1: Press to Show Ranges</h2>
+<button class="btn" id="btnShowRanges" onclick="showRanges()">🎯 SHOW RANGES</button>
+<div id="rangeArea" class="hidden">
+<p>Select one range:</p>
+<div id="firstRanges">
+<button class="rangeBtn" onclick="pickRange(1,10)">$1 - $10</button>
+<button class="rangeBtn" onclick="pickRange(10,20)">$10 - $20</button>
+<button class="rangeBtn" onclick="pickRange(20,30)">$20 - $30</button>
+</div>
+<button class="btn btn2" id="moreBtn" onclick="showMore()">Press Again for More Ranges ➕</button>
+<div id="moreRanges" class="hidden">
+<button class="rangeBtn" onclick="pickRange(30,50)">$30 - $50</button>
+<button class="rangeBtn" onclick="pickRange(50,100)">$50 - $100</button>
+<button class="rangeBtn" onclick="pickRange(1,100)">$1 - $100 (MAX)</button>
+</div>
+</div>
+</div>
+
+<div class="card hidden" id="step3">
+<h2 id="rangeTitle"></h2>
+<p id="lifetimeInfo" style="background:#e8ffe8;padding:10px;border-radius:8px"></p>
+<label>Select Amount Within Range (charged in $ every time):</label>
+<input type="range" id="amtRange" style="width:100%" oninput="updAmt()">
+<p style="text-align:center;font-size:24px;font-weight:bold">$<span id="amtVal">5</span></p>
+<input class="inp" id="jName" readonly><input class="inp" id="jPhone" readonly>
+<button class="btn" onclick="doJoin()">💰 PAY $<span id="payAmt">5</span> & JOIN MERRY</button>
+<div id="joinResult"></div>
+<h3 id="membersTitle" style="margin-top:15px"></h3>
+<div id="membersList"></div>
+<p id="groupInfo"></p>
+</div>
+
+<script>
+let selRmin, selRmax, selAmt;
+let curName, curPhone;
+
+function showRanges(){document.getElementById('rangeArea').classList.remove('hidden');btnShowRanges.innerText='Ranges Shown Below 👇';}
+function showMore(){document.getElementById('moreRanges').classList.remove('hidden');moreBtn.classList.add('hidden');}
+
+function pickRange(min,max){
+ selRmin=min; selRmax=max;
+ document.querySelectorAll('.rangeBtn').forEach(b=>b.classList.remove('active'));
+ event.target.classList.add('active');
+ document.getElementById('step2').classList.add('hidden');
+ document.getElementById('step3').classList.remove('hidden');
+ rangeTitle.innerText=`Range $${min} - $${max}`;
+ let lifetime = max*10;
+ lifetimeInfo.innerHTML=`🔥 Merry checks highest in range ($${max}) x10 = <b>$${lifetime} ONCE IN LIFETIME WIN</b><br>Your charge: you choose $${min}-$${max} each time`;
+ let slider=document.getElementById('amtRange'); slider.min=min; slider.max=max; slider.value=Math.floor((min+max)/2); updAmt();
+ jName.value=curName; jPhone.value=curPhone;
+ loadGroup();
+}
+
+function updAmt(){selAmt=document.getElementById('amtRange').value; amtVal.innerText=selAmt; payAmt.innerText=selAmt;}
+
+paypal.Buttons({
+ createOrder:(d,a)=>{if(!rName.value||!rPhone.value){alert('Enter name & phone');return;}return a.order.create({purchase_units:[{amount:{value:'1.00'}}]})},
+ onApprove:(d,a)=>a.order.capture().then(()=>{
+  fetch('/api/verify_registration',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:rName.value,phone:rPhone.value,orderID:d.orderID})})
+ .then(()=>{curName=rName.value; curPhone=rPhone.value; s1msg.innerText='✅ $1 Paid LIVE! '+d.orderID; step1.classList.add('hidden'); step2.classList.remove('hidden');})
+ })
+}).render('#paypal-button');
+
+function doJoin(){
+ fetch('/api/join',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:curName,phone:curPhone,range_min:selRmin,range_max:selRmax,amount:parseInt(selAmt)})})
+.then(r=>r.json()).then(d=>{
+  if(d.error){alert(d.error);return;}
+  joinResult.innerHTML=`<div style="background:#d4edda;padding:12px;border-radius:10px;margin-top:10px"><b>Joined Group #${d.group_number}</b><br>Count: ${d.count}/10<br>Pool: $${d.total}<br>Lifetime Win: $${d.lifetime_amount} (once)<br>${d.is_full?'🎉 Winner: '+d.beneficiary.name+' Wins $'+d.beneficiary.wins: '⏳ Waiting for 10 members' }</div>`;
+  showMembers(d.members); groupInfo.innerText=`Group #${d.group_number} needs ${10-d.count} more to spin!`;
+ })
+}
+
+function loadGroup(){
+ fetch(`/api/group_status/${selRmin}/${selRmax}`).then(r=>r.json()).then(d=>{
+  groupInfo.innerText=`Live Group #${d.group_number}: ${d.count}/10 Members | Pool $${d.total}`;
+  showMembers(d.members);
+ })
+}
+
+function showMembers(members){
+ membersTitle.innerText=`👥 ${members.length} People Picked $${selRmin}-$${selRmax} (same range as you):`;
+ let html=''; members.forEach(m=>{html+=`<div class="member">👤 ${m.name} - $${m.amount} - ${m.time||''}</div>`});
+ membersList.innerHTML=html || '<p>No one yet in this range - you are first!</p>';
+}
+</script></body></html>
